@@ -1,3 +1,6 @@
+# RandomQuoteGenerator
+**Random Quote Generator** is a React Native app that shows a random quote when a button is pressed. The main code runs in the **App.js** file, which handles the app's design and functionality.
+
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
 # Getting Started
