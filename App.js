@@ -23,7 +23,7 @@ export default function App() {
     const fetchQuotes = async () => {
       try {
         const response = await fetch(
-          'http://192.168.100.49/FoodOrderingSystemApi/api/Quotes/GetAllQuotes'
+          'http://192.168.100.49/RandomQuote/api/Quotes/GetAllQuotes'
         ); // Use your local IP
         if (!response.ok) throw new Error(`Error: ${response.status}`);
         const data = await response.json();
