@@ -1,46 +1,45 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Share, Alert, Animated, Easing } from 'react-native';
-
-const quotes = [
-  {
-    text: 'This is why I loved technology: If you used it right, it could give you the power & privacy.',
-    author: 'Cory Doctorow',
-  },
-  {
-    text: 'Life is what happens when you’re busy making other plans.',
-    author: 'John Lennon',
-  },
-  {
-    text: 'The way to get started is to quit talking and begin doing.',
-    author: 'Walt Disney',
-  },
-  {
-    text: 'Your time is limited, so don’t waste it living someone else’s life.',
-    author: 'Steve Jobs',
-  },
-  { 
-    text: 'The best way to predict the future is to invent it.',
-     author: 'Alan Kay' },
-  { 
-    text: 'Life is 10% what happens to us and 90% how we react to it.',
-     author: 'Charles R. Swindoll'
-     },
-  { 
-    text: 'The only limit to our realization of tomorrow is our doubts of today.', 
-    author: 'Franklin D. Roosevelt' },
-
-];
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Share,
+  Alert,
+  Animated,
+  Easing,
+  ActivityIndicator,
+} from 'react-native';
 
 export default function App() {
-  const [currentQuote, setCurrentQuote] = useState(quotes[0]);
-  const fadeAnim = useRef(new Animated.Value(1)).current; 
+  const [quotes, setQuotes] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  const getRandomQuote = () => {
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    const newQuote = quotes[randomIndex];
+  // Fetch quotes from the API
+  useEffect(() => {
+    const fetchQuotes = async () => {
+      try {
+        const response = await fetch(
+          'http://192.168.100.49/FoodOrderingSystemApi/api/Quotes/GetAllQuotes'
+        ); // Use your local IP
+        if (!response.ok) throw new Error(`Error: ${response.status}`);
+        const data = await response.json();
+        setQuotes(data);
+      } catch (error) {
+        console.error('Failed to fetch quotes:', error);
+        Alert.alert('Error', 'Failed to fetch quotes from the API.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-   
+    fetchQuotes();
+  }, []);
+
+  const handleAnimation = (callback) => {
     Animated.sequence([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -54,11 +53,8 @@ export default function App() {
         useNativeDriver: true,
       }),
     ]).start(() => {
-    
-      setCurrentQuote(newQuote);
-
-      
-      slideAnim.setValue(50); 
+      callback();
+      slideAnim.setValue(50);
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -67,7 +63,7 @@ export default function App() {
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
-          toValue: 1, 
+          toValue: 1,
           duration: 300,
           useNativeDriver: true,
         }),
@@ -75,9 +71,27 @@ export default function App() {
     });
   };
 
+  const getNextQuote = () => {
+    if (quotes.length === 0) return;
+    handleAnimation(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % quotes.length);
+    });
+  };
+
+  const getPreviousQuote = () => {
+    if (quotes.length === 0) return;
+    handleAnimation(() => {
+      setCurrentIndex((prevIndex) =>
+        prevIndex === 0 ? quotes.length - 1 : prevIndex - 1
+      );
+    });
+  };
+
   const shareQuote = async () => {
+    if (!quotes[currentIndex]) return;
+
     try {
-      const message = `"${currentQuote.text}" — ${currentQuote.author}`;
+      const message = `"${quotes[currentIndex].quoteText}" — ${quotes[currentIndex].authorName}`;
       await Share.share({
         message,
       });
@@ -86,30 +100,47 @@ export default function App() {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#4285F4" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.quoteCard}>
         <Text style={styles.header}>Quote of the Day</Text>
 
-       
-        <Animated.View
-          style={[
-            styles.animatedContainer,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
-        >
-          <Text style={styles.quoteText}>
-            “{currentQuote.text}”
-          </Text>
-          <Text style={styles.author}>— {currentQuote.author}</Text>
-        </Animated.View>
+        {quotes[currentIndex] && (
+          <Animated.View
+            style={[
+              styles.animatedContainer,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <Text style={styles.quoteText}>
+              “{quotes[currentIndex].quoteText}”
+            </Text>
+            <Text style={styles.author}>
+              — {quotes[currentIndex].authorName}
+            </Text>
+          </Animated.View>
+        )}
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.iconButton} onPress={shareQuote}>
-            <Text style={styles.iconText}>📤 Share</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={getPreviousQuote}>
+            <Text style={styles.iconText}>◀ Previous</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.newQuoteButton} onPress={getRandomQuote}>
-            <Text style={styles.newQuoteButtonText}>New Quote</Text>
+         
+          <TouchableOpacity style={styles.newQuoteButton} onPress={getNextQuote}>
+            <Text style={styles.newQuoteButtonText}>Next ▶</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.buttonContainer}>
+        <TouchableOpacity style={styles.iconButton} onPress={shareQuote}>
+            <Text style={styles.iconText}>📤 Share</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -163,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 20,
-    width: '100%',
+    
   },
   iconButton: {
     backgroundColor: '#4285F4',
